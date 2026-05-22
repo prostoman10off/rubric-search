@@ -138,6 +138,8 @@
     .sidebar {
       position: sticky;
       top: 24px;
+      display: grid;
+      gap: 16px;
     }
 
     .selected-box {
@@ -153,8 +155,9 @@
       font-size: 20px;
     }
 
-    .codes-output {
-      min-height: 180px;
+    .codes-output,
+    .rubrics-output {
+      min-height: 140px;
       background: #f7f9fc;
       border: 1px solid #d6dce5;
       border-radius: 12px;
@@ -170,7 +173,7 @@
       color: #444;
     }
 
-    .copy-btn, .clear-btn {
+    .copy-btn, .clear-btn, .copy-rubrics-btn {
       width: 100%;
       border: none;
       border-radius: 12px;
@@ -180,12 +183,14 @@
       margin-bottom: 10px;
     }
 
-    .copy-btn {
+    .copy-btn,
+    .copy-rubrics-btn {
       background: #20b26b;
       color: white;
     }
 
-    .copy-btn:hover {
+    .copy-btn:hover,
+    .copy-rubrics-btn:hover {
       background: #16955a;
     }
 
@@ -248,7 +253,7 @@
         <input
           type="text"
           id="query"
-          placeholder="Введите запрос, например: оформить ДТП, бомбоубежище, аварийная служба"
+          placeholder="Введите запрос, например: генератор, мясо, барбершоп"
         />
         <button id="searchBtn">Найти</button>
       </div>
@@ -274,10 +279,15 @@
           <div id="selectedCodes" class="codes-output">Пока ничего не выбрано</div>
           <button id="copyCodesBtn" class="copy-btn">Скопировать коды</button>
           <button id="clearSelectionBtn" class="clear-btn">Снять все галочки</button>
-
           <div class="hint">Коды выводятся по одному в строке</div>
-
           <ul id="selectedItems" class="selected-list"></ul>
+        </div>
+
+        <div class="selected-box">
+          <h3>Выбранные рубрики</h3>
+          <div id="selectedRubrics" class="rubrics-output">Пока ничего не выбрано</div>
+          <button id="copyRubricsBtn" class="copy-rubrics-btn">Скопировать рубрики</button>
+          <div class="hint">Названия рубрик выводятся списком</div>
         </div>
       </div>
     </div>
