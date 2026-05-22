@@ -1,7 +1,7 @@
 let rubricsData = [];
 
 async function loadExcel() {
-  const response = await fetch('./Рубрики_Россия_07.05.26_с_описанием.xlsx');
+  const response = await fetch('./rubrics.xlsx');
   const arrayBuffer = await response.arrayBuffer();
 
   const workbook = XLSX.read(arrayBuffer, { type: 'array' });
