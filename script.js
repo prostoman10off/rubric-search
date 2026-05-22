@@ -276,11 +276,7 @@ function createResultCard(item, mode) {
   const checked = isChecked(String(item.code), item.rubric);
 
   const scoreBlock = mode === 'simple'
-    ? `
-      <div class="meta"><strong>Всего совпадений:</strong> ${item.totalMatches}</div>
-      <div class="meta"><strong>Совпадения в ключевых словах:</strong> ${item.keywordMatches}</div>
-      <div class="meta"><strong>Совпадения в описании:</strong> ${item.descriptionMatches}</div>
-    `
+    ? ``
     : `
       <div class="meta"><strong>Общий балл:</strong> ${item.score}</div>
       <div class="meta"><strong>Точные совпадения в ключевых словах:</strong> ${item.keywordExact}</div>
