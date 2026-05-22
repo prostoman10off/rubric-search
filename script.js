@@ -34,19 +34,28 @@ function getWords(text) {
     .filter(Boolean);
 }
 
+function escapeHtml(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function highlightText(text, queryWords) {
-  let result = String(text || '');
+  let result = escapeHtml(String(text || ''));
 
   queryWords
     .filter(word => word.length > 1)
     .sort((a, b) => b.length - a.length)
     .forEach(word => {
-      const regex = new RegExp(`\\b(${escapeRegExp(word)})\\b`, 'gi');
-      result = result.replace(regex, '<mark>$1</mark>');
+      const regex = new RegExp(`(${escapeRegExp(word)})`, 'gi');
+      result = result.replace(regex, '<span class="hl">$1</span>');
     });
 
   return result;
@@ -116,12 +125,8 @@ function simpleSearch(query) {
     })
     .filter(item => item.totalMatches > 0)
     .sort((a, b) => {
-      if (b.totalMatches !== a.totalMatches) {
-        return b.totalMatches - a.totalMatches;
-      }
-      if (b.keywordMatches !== a.keywordMatches) {
-        return b.keywordMatches - a.keywordMatches;
-      }
+      if (b.totalMatches !== a.totalMatches) return b.totalMatches - a.totalMatches;
+      if (b.keywordMatches !== a.keywordMatches) return b.keywordMatches - a.keywordMatches;
       return b.descriptionMatches - a.descriptionMatches;
     });
 }
@@ -207,7 +212,7 @@ function renderSelectedPanel() {
   selectedCodesEl.textContent = uniqueCodes.join('\n');
 
   selectedItemsEl.innerHTML = items
-    .map(item => `<li>${item.rubric} — <strong>${item.code}</strong></li>`)
+    .map(item => `<li>${escapeHtml(item.rubric)} — <strong>${escapeHtml(item.code)}</strong></li>`)
     .join('');
 }
 
@@ -234,13 +239,13 @@ function createResultCard(item, queryWords, mode) {
         <input
           type="checkbox"
           class="result-checkbox"
-          data-code="${String(item.code).replace(/"/g, '&quot;')}"
-          data-rubric="${String(item.rubric).replace(/"/g, '&quot;')}"
+          data-code="${escapeHtml(String(item.code))}"
+          data-rubric="${escapeHtml(String(item.rubric))}"
           ${checked ? 'checked' : ''}
         />
         <div class="result-main">
           <div><strong>Рубрика:</strong> ${highlightText(item.rubric, queryWords)}</div>
-          <div><strong>Код рубрики:</strong> ${item.code}</div>
+          <div><strong>Код рубрики:</strong> ${escapeHtml(item.code)}</div>
           ${scoreBlock}
           <div class="meta"><strong>Ключевые слова:</strong> ${highlightText(item.keywordsText, queryWords)}</div>
           <div class="meta"><strong>Описание:</strong> ${highlightText(item.descriptionText, queryWords)}</div>
