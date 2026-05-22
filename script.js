@@ -34,6 +34,10 @@ function getWords(text) {
     .filter(Boolean);
 }
 
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function escapeHtml(text) {
   return String(text || '')
     .replace(/&/g, '&amp;')
@@ -43,20 +47,49 @@ function escapeHtml(text) {
     .replace(/'/g, '&#39;');
 }
 
-function escapeRegExp(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function getMatchData(queryWords, textWords) {
+  const exactMatches = new Set();
+  const partialMatches = new Set();
+
+  queryWords.forEach(queryWord => {
+    textWords.forEach(word => {
+      if (word === queryWord) {
+        exactMatches.add(word);
+      } else if (
+        queryWord.length >= 4 &&
+        word.length >= 4 &&
+        (word.includes(queryWord) || queryWord.includes(word))
+      ) {
+        if (word.includes(queryWord)) {
+          partialMatches.add(queryWord);
+        } else if (queryWord.includes(word)) {
+          partialMatches.add(word);
+        }
+      }
+    });
+  });
+
+  return {
+    exactMatches: Array.from(exactMatches),
+    partialMatches: Array.from(partialMatches)
+  };
 }
 
-function highlightText(text, queryWords) {
+function highlightTextByMatchType(text, exactFragments = [], partialFragments = []) {
   let result = escapeHtml(String(text || ''));
 
-  queryWords
-    .filter(word => word.length > 1)
-    .sort((a, b) => b.length - a.length)
-    .forEach(word => {
-      const regex = new RegExp(`(${escapeRegExp(word)})`, 'gi');
-      result = result.replace(regex, '<span class="hl">$1</span>');
-    });
+  const allFragments = [
+    ...exactFragments.map(value => ({ value, type: 'exact' })),
+    ...partialFragments.map(value => ({ value, type: 'partial' }))
+  ]
+    .filter(item => item.value && item.value.length > 1)
+    .sort((a, b) => b.value.length - a.value.length);
+
+  allFragments.forEach(fragment => {
+    const className = fragment.type === 'exact' ? 'hl-exact' : 'hl-partial';
+    const regex = new RegExp(`(${escapeRegExp(fragment.value)})`, 'gi');
+    result = result.replace(regex, `<span class="${className}">$1</span>`);
+  });
 
   return result;
 }
@@ -112,6 +145,9 @@ function simpleSearch(query) {
       const descriptionMatches = countExactMatches(queryWords, descriptionWords);
       const totalMatches = keywordMatches + descriptionMatches;
 
+      const keywordMatchData = getMatchData(queryWords, keywordWords);
+      const descriptionMatchData = getMatchData(queryWords, descriptionWords);
+
       return {
         id: `simple-${index}`,
         rubric: row['Рубрика'] || '—',
@@ -120,13 +156,21 @@ function simpleSearch(query) {
         descriptionText: row['Описание'] || '',
         keywordMatches,
         descriptionMatches,
-        totalMatches
+        totalMatches,
+        keywordExactFragments: keywordMatchData.exactMatches,
+        keywordPartialFragments: [],
+        descriptionExactFragments: descriptionMatchData.exactMatches,
+        descriptionPartialFragments: []
       };
     })
     .filter(item => item.totalMatches > 0)
     .sort((a, b) => {
-      if (b.totalMatches !== a.totalMatches) return b.totalMatches - a.totalMatches;
-      if (b.keywordMatches !== a.keywordMatches) return b.keywordMatches - a.keywordMatches;
+      if (b.totalMatches !== a.totalMatches) {
+        return b.totalMatches - a.totalMatches;
+      }
+      if (b.keywordMatches !== a.keywordMatches) {
+        return b.keywordMatches - a.keywordMatches;
+      }
       return b.descriptionMatches - a.descriptionMatches;
     });
 }
@@ -145,6 +189,9 @@ function smartSearch(query) {
       const keywordPartial = countPartialMatches(queryWords, keywordWords);
       const descriptionPartial = countPartialMatches(queryWords, descriptionWords);
 
+      const keywordMatchData = getMatchData(queryWords, keywordWords);
+      const descriptionMatchData = getMatchData(queryWords, descriptionWords);
+
       const score =
         keywordExact * 3 +
         descriptionExact * 2 +
@@ -161,7 +208,11 @@ function smartSearch(query) {
         descriptionExact,
         keywordPartial,
         descriptionPartial,
-        score: Number(score.toFixed(1))
+        score: Number(score.toFixed(1)),
+        keywordExactFragments: keywordMatchData.exactMatches,
+        keywordPartialFragments: keywordMatchData.partialMatches,
+        descriptionExactFragments: descriptionMatchData.exactMatches,
+        descriptionPartialFragments: descriptionMatchData.partialMatches
       };
     })
     .filter(item => item.keywordExact > 0 || item.descriptionExact > 0 || item.score >= 2)
@@ -216,7 +267,7 @@ function renderSelectedPanel() {
     .join('');
 }
 
-function createResultCard(item, queryWords, mode) {
+function createResultCard(item, mode) {
   const checked = isChecked(String(item.code), item.rubric);
 
   const scoreBlock = mode === 'simple'
@@ -244,20 +295,27 @@ function createResultCard(item, queryWords, mode) {
           ${checked ? 'checked' : ''}
         />
         <div class="result-main">
-          <div><strong>Рубрика:</strong> ${highlightText(item.rubric, queryWords)}</div>
+          <div><strong>Рубрика:</strong> ${escapeHtml(item.rubric)}</div>
           <div><strong>Код рубрики:</strong> ${escapeHtml(item.code)}</div>
           ${scoreBlock}
-          <div class="meta"><strong>Ключевые слова:</strong> ${highlightText(item.keywordsText, queryWords)}</div>
-          <div class="meta"><strong>Описание:</strong> ${highlightText(item.descriptionText, queryWords)}</div>
+          <div class="meta"><strong>Ключевые слова:</strong> ${highlightTextByMatchType(
+            item.keywordsText,
+            item.keywordExactFragments,
+            item.keywordPartialFragments
+          )}</div>
+          <div class="meta"><strong>Описание:</strong> ${highlightTextByMatchType(
+            item.descriptionText,
+            item.descriptionExactFragments,
+            item.descriptionPartialFragments
+          )}</div>
         </div>
       </div>
     </div>
   `;
 }
 
-function renderSimpleResults(results, query) {
+function renderSimpleResults(results) {
   const container = document.getElementById('simpleResults');
-  const queryWords = getWords(query);
 
   if (!results.length) {
     container.innerHTML = '<div class="empty">Нет совпадений</div>';
@@ -265,15 +323,14 @@ function renderSimpleResults(results, query) {
   }
 
   container.innerHTML = results
-    .map(item => createResultCard(item, queryWords, 'simple'))
+    .map(item => createResultCard(item, 'simple'))
     .join('');
 
   attachCheckboxHandlers();
 }
 
-function renderSmartResults(results, query) {
+function renderSmartResults(results) {
   const container = document.getElementById('smartResults');
-  const queryWords = getWords(query);
 
   if (!results.length) {
     container.innerHTML = '<div class="empty">Нет совпадений</div>';
@@ -281,7 +338,7 @@ function renderSmartResults(results, query) {
   }
 
   container.innerHTML = results
-    .map(item => createResultCard(item, queryWords, 'smart'))
+    .map(item => createResultCard(item, 'smart'))
     .join('');
 
   attachCheckboxHandlers();
@@ -316,8 +373,8 @@ function runSearch() {
   const simpleResults = simpleSearch(query);
   const smartResults = smartSearch(query);
 
-  renderSimpleResults(simpleResults, query);
-  renderSmartResults(smartResults, query);
+  renderSimpleResults(simpleResults);
+  renderSmartResults(smartResults);
   syncCheckboxes();
 }
 
