@@ -45,11 +45,50 @@ function highlightText(text, queryWords) {
     .filter(word => word.length > 1)
     .sort((a, b) => b.length - a.length)
     .forEach(word => {
-      const regex = new RegExp(`(${escapeRegExp(word)})`, 'gi');
+      const regex = new RegExp(`\\b(${escapeRegExp(word)})\\b`, 'gi');
       result = result.replace(regex, '<mark>$1</mark>');
     });
 
   return result;
+}
+
+function countExactMatches(queryWords, textWords) {
+  let count = 0;
+  const usedIndexes = new Set();
+
+  queryWords.forEach(queryWord => {
+    for (let i = 0; i < textWords.length; i++) {
+      if (!usedIndexes.has(i) && textWords[i] === queryWord) {
+        count++;
+        usedIndexes.add(i);
+        break;
+      }
+    }
+  });
+
+  return count;
+}
+
+function countPartialMatches(queryWords, textWords) {
+  let count = 0;
+
+  queryWords.forEach(queryWord => {
+    if (queryWord.length < 4) return;
+
+    for (let i = 0; i < textWords.length; i++) {
+      const word = textWords[i];
+      if (
+        word.length >= 4 &&
+        word !== queryWord &&
+        (word.includes(queryWord) || queryWord.includes(word))
+      ) {
+        count++;
+        break;
+      }
+    }
+  });
+
+  return count;
 }
 
 function simpleSearch(query) {
@@ -57,35 +96,22 @@ function simpleSearch(query) {
 
   return rubricsData
     .map((row, index) => {
-      const keywords = normalizeText(row['Ключевые слова']);
-      const description = normalizeText(row['Описание']);
+      const keywordWords = getWords(row['Ключевые слова']);
+      const descriptionWords = getWords(row['Описание']);
 
-      let keywordMatches = 0;
-      let descriptionMatches = 0;
-
-      queryWords.forEach(word => {
-        if (keywords.includes(word)) {
-          keywordMatches += 1;
-        }
-        if (description.includes(word)) {
-          descriptionMatches += 1;
-        }
-      });
-
+      const keywordMatches = countExactMatches(queryWords, keywordWords);
+      const descriptionMatches = countExactMatches(queryWords, descriptionWords);
       const totalMatches = keywordMatches + descriptionMatches;
-      const weightedScore = keywordMatches * 2 + descriptionMatches;
 
       return {
         id: `simple-${index}`,
-        originalId: index,
         rubric: row['Рубрика'] || '—',
         code: row['Код рубрики'] || '—',
         keywordsText: row['Ключевые слова'] || '',
         descriptionText: row['Описание'] || '',
         keywordMatches,
         descriptionMatches,
-        totalMatches,
-        score: weightedScore
+        totalMatches
       };
     })
     .filter(item => item.totalMatches > 0)
@@ -96,10 +122,7 @@ function simpleSearch(query) {
       if (b.keywordMatches !== a.keywordMatches) {
         return b.keywordMatches - a.keywordMatches;
       }
-      if (b.descriptionMatches !== a.descriptionMatches) {
-        return b.descriptionMatches - a.descriptionMatches;
-      }
-      return b.score - a.score;
+      return b.descriptionMatches - a.descriptionMatches;
     });
 }
 
@@ -108,65 +131,36 @@ function smartSearch(query) {
 
   return rubricsData
     .map((row, index) => {
-      const keywordsWords = getWords(row['Ключевые слова']);
+      const keywordWords = getWords(row['Ключевые слова']);
       const descriptionWords = getWords(row['Описание']);
 
-      let keywordScore = 0;
-      let descriptionScore = 0;
-      let partialScore = 0;
-      let exactMatches = 0;
+      const keywordExact = countExactMatches(queryWords, keywordWords);
+      const descriptionExact = countExactMatches(queryWords, descriptionWords);
 
-      queryWords.forEach(queryWord => {
-        keywordsWords.forEach(word => {
-          if (word === queryWord) {
-            keywordScore += 3;
-            exactMatches += 1;
-          } else if (
-            queryWord.length > 3 &&
-            word.length > 3 &&
-            (word.includes(queryWord) || queryWord.includes(word))
-          ) {
-            partialScore += 1.5;
-          }
-        });
+      const keywordPartial = countPartialMatches(queryWords, keywordWords);
+      const descriptionPartial = countPartialMatches(queryWords, descriptionWords);
 
-        descriptionWords.forEach(word => {
-          if (word === queryWord) {
-            descriptionScore += 2;
-            exactMatches += 1;
-          } else if (
-            queryWord.length > 3 &&
-            word.length > 3 &&
-            (word.includes(queryWord) || queryWord.includes(word))
-          ) {
-            partialScore += 1;
-          }
-        });
-      });
-
-      const totalScore = Number((keywordScore + descriptionScore + partialScore).toFixed(1));
+      const score =
+        keywordExact * 3 +
+        descriptionExact * 2 +
+        keywordPartial * 1.5 +
+        descriptionPartial * 1;
 
       return {
         id: `smart-${index}`,
-        originalId: index,
         rubric: row['Рубрика'] || '—',
         code: row['Код рубрики'] || '—',
         keywordsText: row['Ключевые слова'] || '',
         descriptionText: row['Описание'] || '',
-        keywordScore,
-        descriptionScore,
-        partialScore,
-        exactMatches,
-        score: totalScore
+        keywordExact,
+        descriptionExact,
+        keywordPartial,
+        descriptionPartial,
+        score: Number(score.toFixed(1))
       };
     })
-    .filter(item => item.score > 0 && (item.exactMatches > 0 || item.score >= 2))
-    .sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
-      }
-      return b.exactMatches - a.exactMatches;
-    });
+    .filter(item => item.keywordExact > 0 || item.descriptionExact > 0 || item.score >= 2)
+    .sort((a, b) => b.score - a.score);
 }
 
 function isChecked(code, rubric) {
@@ -228,10 +222,10 @@ function createResultCard(item, queryWords, mode) {
     `
     : `
       <div class="meta"><strong>Общий балл:</strong> ${item.score}</div>
-      <div class="meta"><strong>Точные совпадения:</strong> ${item.exactMatches}</div>
-      <div class="meta"><strong>Совпадения в ключевых словах:</strong> ${item.keywordScore}</div>
-      <div class="meta"><strong>Совпадения в описании:</strong> ${item.descriptionScore}</div>
-      <div class="meta"><strong>Частичные совпадения:</strong> ${item.partialScore}</div>
+      <div class="meta"><strong>Точные совпадения в ключевых словах:</strong> ${item.keywordExact}</div>
+      <div class="meta"><strong>Точные совпадения в описании:</strong> ${item.descriptionExact}</div>
+      <div class="meta"><strong>Частичные совпадения в ключевых словах:</strong> ${item.keywordPartial}</div>
+      <div class="meta"><strong>Частичные совпадения в описании:</strong> ${item.descriptionPartial}</div>
     `;
 
   return `
