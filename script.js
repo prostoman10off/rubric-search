@@ -1,16 +1,22 @@
 let rubricsData = [];
 
 async function loadExcel() {
-  const response = await fetch('./rubrics.xlsx');
-  const arrayBuffer = await response.arrayBuffer();
+  try {
+    const response = await fetch('./rubrics.xlsx');
+    const arrayBuffer = await response.arrayBuffer();
 
-  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-  const firstSheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[firstSheetName];
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
 
-  rubricsData = XLSX.utils.sheet_to_json(worksheet);
+    rubricsData = XLSX.utils.sheet_to_json(worksheet);
 
-  console.log('Данные загружены:', rubricsData);
+    console.log('Данные загружены:', rubricsData);
+  } catch (error) {
+    console.error('Ошибка загрузки Excel:', error);
+    document.getElementById('simpleResults').innerHTML = '<p>Ошибка загрузки Excel-файла</p>';
+    document.getElementById('smartResults').innerHTML = '<p>Ошибка загрузки Excel-файла</p>';
+  }
 }
 
 function normalizeText(text) {
@@ -21,57 +27,11 @@ function normalizeText(text) {
     .trim();
 }
 
+function getWords(text) {
+  return normalizeText(text)
+    .split(' ')
+    .filter(Boolean);
+}
+
 function simpleSearch(query) {
-  const normalizedQuery = normalizeText(query);
-  const queryWords = normalizedQuery.split(' ').filter(Boolean);
-
-  return rubricsData
-    .map(row => {
-      const description = normalizeText(row['Описание']);
-      let score = 0;
-
-      queryWords.forEach(word => {
-        if (description.includes(word)) {
-          score++;
-        }
-      });
-
-      return {
-        rubric: row['Рубрика'],
-        code: row['Код рубрики'],
-        score
-      };
-    })
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score);
-}
-
-function renderSimpleResults(results) {
-  const container = document.getElementById('simpleResults');
-
-  if (!results.length) {
-    container.innerHTML = '<p>Ничего не найдено</p>';
-    return;
-  }
-
-  container.innerHTML = results
-    .map(item => `
-      <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #ccc;">
-        <div><strong>Рубрика:</strong> ${item.rubric}</div>
-        <div><strong>Код рубрики:</strong> ${item.code}</div>
-        <div><strong>Совпадений:</strong> ${item.score}</div>
-      </div>
-    `)
-    .join('');
-}
-
-document.getElementById('searchBtn').addEventListener('click', () => {
-  const query = document.getElementById('query').value;
-
-  const simpleResults = simpleSearch(query);
-  renderSimpleResults(simpleResults);
-
-  document.getElementById('smartResults').innerHTML = '<p>Пока не реализован</p>';
-});
-
-loadExcel();
+  const
