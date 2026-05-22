@@ -4,18 +4,274 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Поиск рубрики</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      color: #222;
+    }
+
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+    }
+
+    .header p {
+      margin: 0;
+      color: #666;
+    }
+
+    .search-panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .search-row input {
+      flex: 1;
+      min-width: 280px;
+      padding: 14px 16px;
+      border: 1px solid #d6dce5;
+      border-radius: 12px;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .search-row input:focus {
+      border-color: #4a7cff;
+      box-shadow: 0 0 0 3px rgba(74,124,255,0.12);
+    }
+
+    .search-row button {
+      padding: 14px 22px;
+      border: none;
+      border-radius: 12px;
+      background: #4a7cff;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .search-row button:hover {
+      background: #356cff;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .results-area {
+      display: grid;
+      gap: 24px;
+    }
+
+    .block {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    .block h2 {
+      margin: 0 0 16px;
+      font-size: 22px;
+    }
+
+    .results-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .result-card {
+      border: 1px solid #d9e1ec;
+      border-radius: 14px;
+      padding: 14px;
+      background: #fafcff;
+    }
+
+    .result-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .result-main {
+      flex: 1;
+    }
+
+    .result-main div {
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .meta {
+      color: #4f5d75;
+      font-size: 14px;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 24px;
+    }
+
+    .selected-box {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    .selected-box h3 {
+      margin-top: 0;
+      margin-bottom: 14px;
+      font-size: 20px;
+    }
+
+    .codes-output {
+      min-height: 180px;
+      background: #f7f9fc;
+      border: 1px solid #d6dce5;
+      border-radius: 12px;
+      padding: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-bottom: 12px;
+    }
+
+    .selected-list {
+      margin-top: 14px;
+      padding-left: 18px;
+      color: #444;
+    }
+
+    .copy-btn, .clear-btn {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 15px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    .copy-btn {
+      background: #20b26b;
+      color: white;
+    }
+
+    .copy-btn:hover {
+      background: #16955a;
+    }
+
+    .clear-btn {
+      background: #eef2f8;
+      color: #333;
+    }
+
+    .clear-btn:hover {
+      background: #dde5f0;
+    }
+
+    mark {
+      background: #ffe58f;
+      padding: 0 2px;
+      border-radius: 4px;
+    }
+
+    .empty {
+      color: #666;
+      padding: 12px 0;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 1000px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Поиск рубрики</h1>
+  <div class="page">
+    <div class="header">
+      <h1>Поиск рубрик</h1>
+      <p>Поиск по ключевым словам и описанию с выбором кодов рубрик</p>
+    </div>
 
-  <input type="text" id="query" placeholder="Введите запрос" />
-  <button id="searchBtn">Найти</button>
+    <div class="search-panel">
+      <div class="search-row">
+        <input
+          type="text"
+          id="query"
+          placeholder="Введите запрос, например: оформить ДТП, бомбоубежище, аварийная служба"
+        />
+        <button id="searchBtn">Найти</button>
+      </div>
+      <div class="hint">Можно нажать Enter вместо кнопки</div>
+    </div>
 
-  <h2>Простой поиск</h2>
-  <div id="simpleResults"></div>
+    <div class="layout">
+      <div class="results-area">
+        <div class="block">
+          <h2>Простой поиск</h2>
+          <div id="simpleResults" class="results-list"></div>
+        </div>
 
-  <h2>Умный поиск</h2>
-  <div id="smartResults"></div>
+        <div class="block">
+          <h2>Умный поиск</h2>
+          <div id="smartResults" class="results-list"></div>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="selected-box">
+          <h3>Выбранные коды рубрик</h3>
+          <div id="selectedCodes" class="codes-output">Пока ничего не выбрано</div>
+          <button id="copyCodesBtn" class="copy-btn">Скопировать коды</button>
+          <button id="clearSelectionBtn" class="clear-btn">Снять все галочки</button>
+
+          <div class="hint">Коды выводятся по одному в строке</div>
+
+          <ul id="selectedItems" class="selected-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="script.js"></script>
