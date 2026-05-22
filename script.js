@@ -250,17 +250,22 @@ function syncCheckboxes() {
 function renderSelectedPanel() {
   const selectedCodesEl = document.getElementById('selectedCodes');
   const selectedItemsEl = document.getElementById('selectedItems');
+  const selectedRubricsEl = document.getElementById('selectedRubrics');
 
   const items = Array.from(selectedMap.values());
 
   if (!items.length) {
     selectedCodesEl.textContent = 'Пока ничего не выбрано';
     selectedItemsEl.innerHTML = '';
+    selectedRubricsEl.textContent = 'Пока ничего не выбрано';
     return;
   }
 
   const uniqueCodes = [...new Set(items.map(item => String(item.code)))];
+  const uniqueRubrics = [...new Set(items.map(item => String(item.rubric)))];
+
   selectedCodesEl.textContent = uniqueCodes.join('\n');
+  selectedRubricsEl.textContent = uniqueRubrics.join('\n');
 
   selectedItemsEl.innerHTML = items
     .map(item => `<li>${escapeHtml(item.rubric)} — <strong>${escapeHtml(item.code)}</strong></li>`)
@@ -399,6 +404,22 @@ document.getElementById('copyCodesBtn').addEventListener('click', async function
     alert('Коды скопированы');
   } catch (error) {
     alert('Не удалось скопировать коды');
+  }
+});
+
+document.getElementById('copyRubricsBtn').addEventListener('click', async function () {
+  const text = document.getElementById('selectedRubrics').textContent;
+
+  if (!text || text === 'Пока ничего не выбрано') {
+    alert('Нет выбранных рубрик для копирования');
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('Рубрики скопированы');
+  } catch (error) {
+    alert('Не удалось скопировать рубрики');
   }
 });
 
